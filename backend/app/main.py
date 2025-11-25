@@ -30,6 +30,26 @@ def on_startup():
 def read_root():
     return {"message": "Document Generator API"}
 
+@app.get("/health")
+def health_check(db: Session = Depends(get_db)):
+    """Health check endpoint that also tests database connectivity"""
+    try:
+        # Test database connection
+        user_count = db.query(User).count()
+        return {
+            "status": "healthy", 
+            "database": "connected",
+            "total_users": user_count,
+            "timestamp": "2024-11-25"
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "database": "error", 
+            "error": str(e),
+            "timestamp": "2024-11-25"
+        }
+
 @app.post("/auth/register", response_model=Token, status_code=status.HTTP_201_CREATED)
 def register(user_data: UserCreate, db: Session = Depends(get_db)):
     is_valid, message = validate_username(user_data.username)
