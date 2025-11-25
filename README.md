@@ -4,9 +4,9 @@ A full-stack web application for creating professional documents and presentatio
 
 ## Live Demo
 
-**Live Application**: [https://docugenaii.netlify.app/](https://docugenaii.netlify.app/)
+Live Application: [https://docugenaii.netlify.app/](https://docugenaii.netlify.app/)
 
-**GitHub Repository**: [https://github.com/tsj2003/AI-PPT-and-DOC-Gen.git](https://github.com/tsj2003/AI-PPT-and-DOC-Gen.git)
+GitHub Repository: [https://github.com/tsj2003/AI-PPT-and-DOC-Gen.git](https://github.com/tsj2003/AI-PPT-and-DOC-Gen.git)
 
 Access the fully deployed application to test all features including user registration, AI content generation, and document export functionality.
 
@@ -104,7 +104,7 @@ The frontend application will be available at `http://localhost:5001`
 
 ## Demo Video
 
-**Demo Video**: [Add your demo video link here]
+**Demo Video**: [https://drive.google.com/file/d/146kgG5PenyLtT_9Sflo5jYsVfq4Hnb4r/view?usp=sharing](https://drive.google.com/file/d/146kgG5PenyLtT_9Sflo5jYsVfq4Hnb4r/view?usp=sharing)
 
 ### What the Demo Video Covers (Required)
 
@@ -260,6 +260,6 @@ POST /comments         # Add comments to content
 
 - **GitHub Repository**: https://github.com/tsj2003/AI-PPT-and-DOC-Gen
 - **Live Demo**: https://docugenaii.netlify.app/
-- **Demo Video**: [Add your final demo video link here]
+- **Demo Video**: [https://drive.google.com/file/d/146kgG5PenyLtT_9Sflo5jYsVfq4Hnb4r/view?usp=sharing](https://drive.google.com/file/d/146kgG5PenyLtT_9Sflo5jYsVfq4Hnb4r/view?usp=sharing)
 
 These three links complete the required submission checklist.
