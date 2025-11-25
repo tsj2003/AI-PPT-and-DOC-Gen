@@ -85,7 +85,7 @@ def generate_images_for_sections(sections: list, topic: str) -> dict:
     
     print(f"✓ Trying HuggingFace API with token")
     
-    # Try HuggingFace Inference API first
+    # Try HuggingFace Inference API first (with faster timeout)
     try:
         from huggingface_hub import InferenceClient
         client = InferenceClient(api_key=hf_token)
@@ -97,6 +97,11 @@ def generate_images_for_sections(sections: list, topic: str) -> dict:
             return create_placeholder_images(sections, topic)
         
         return result
+        
+    except ImportError as e:
+        print(f"⚠ HuggingFace Hub not installed: {str(e)}")
+        print("⚠ Falling back to free API alternatives...")
+        return generate_with_free_api(sections, topic, hf_token)
         
     except Exception as e:
         error_msg = str(e)
@@ -220,7 +225,7 @@ def generate_with_free_api(sections: list, topic: str, hf_token: str) -> dict:
             for api in apis_to_try:
                 try:
                     print(f"  🚀 Calling {api['name']}...")
-                    response = requests.get(api['url'], timeout=45)
+                    response = requests.get(api['url'], timeout=15)  # Reduced timeout for faster fallback
                     if response.status_code == 200:
                         print(f"  ✅ Success with {api['name']}")
                         break
