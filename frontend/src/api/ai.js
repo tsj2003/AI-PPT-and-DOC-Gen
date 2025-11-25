@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { getToken, logout } from './auth';
+import { getApiUrl } from '../config/api';
 
 const getAuthHeader = () => {
   const token = getToken();
@@ -24,7 +25,7 @@ const handleAuthError = (error) => {
 
 export const generateTitle = async (topic) => {
   try {
-    const response = await axios.post('/ai/generate-title/', {
+    const response = await axios.post(getApiUrl('/ai/generate-title/'), {
       topic
     }, getAuthHeader());
     return response.data.title;
@@ -35,7 +36,7 @@ export const generateTitle = async (topic) => {
 
 export const generateOutline = async (topic, documentType, numSections = 5) => {
   try {
-    const response = await axios.post('/ai/generate-outline/', {
+    const response = await axios.post(getApiUrl('/ai/generate-outline/'), {
       topic,
       document_type: documentType,
       num_sections: numSections
@@ -48,7 +49,7 @@ export const generateOutline = async (topic, documentType, numSections = 5) => {
 
 export const generateSlideImage = async (prompt, enableImage = true) => {
   try {
-    const response = await axios.post('/ai/generate-slide-image/', {
+    const response = await axios.post(getApiUrl('/ai/generate-slide-image/'), {
       prompt,
       enable_image: enableImage
     }, getAuthHeader());

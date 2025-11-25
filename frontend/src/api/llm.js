@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { getToken, logout } from './auth';
+import { getApiUrl } from '../config/api';
 
 const getAuthHeader = () => {
   const token = getToken();
@@ -24,7 +25,7 @@ const handleAuthError = (error) => {
 
 export const generateContent = async (sectionId, additionalContext = null) => {
   try {
-    const response = await axios.post('/generate/', {
+    const response = await axios.post(getApiUrl('/generate/'), {
       section_id: sectionId,
       additional_context: additionalContext
     }, getAuthHeader());
@@ -36,7 +37,7 @@ export const generateContent = async (sectionId, additionalContext = null) => {
 
 export const refineContent = async (sectionId, refinePrompt) => {
   try {
-    const response = await axios.post('/refine/', {
+    const response = await axios.post(getApiUrl('/refine/'), {
       section_id: sectionId,
       refine_prompt: refinePrompt
     }, getAuthHeader());
@@ -48,7 +49,7 @@ export const refineContent = async (sectionId, refinePrompt) => {
 
 export const addFeedback = async (sectionId, isLiked) => {
   try {
-    const response = await axios.post('/feedback/', {
+    const response = await axios.post(getApiUrl('/feedback/'), {
       section_id: sectionId,
       is_liked: isLiked
     }, getAuthHeader());
@@ -60,7 +61,7 @@ export const addFeedback = async (sectionId, isLiked) => {
 
 export const addComment = async (sectionId, content) => {
   try {
-    const response = await axios.post('/comments/', {
+    const response = await axios.post(getApiUrl('/comments/'), {
       section_id: sectionId,
       content
     }, getAuthHeader());
@@ -72,7 +73,7 @@ export const addComment = async (sectionId, content) => {
 
 export const getComments = async (sectionId) => {
   try {
-    const response = await axios.get(`/sections/${sectionId}/comments/`, getAuthHeader());
+    const response = await axios.get(getApiUrl(`/sections/${sectionId}/comments/`), getAuthHeader());
     return response.data;
   } catch (error) {
     handleAuthError(error);

@@ -1,7 +1,8 @@
 import axios from 'axios';
 import { getToken, logout } from './auth';
+import { getApiUrl } from '../config/api';
 
-const API_URL = '/projects/';
+const API_URL = getApiUrl('/projects/');
 
 const getAuthHeader = () => {
   const token = getToken();
