@@ -13,6 +13,14 @@ import google.generativeai as genai
 genai.configure(api_key=settings.GEMINI_API_KEY)
 
 
+def filepath_to_url(filepath: str) -> str:
+    """Convert a local file path to a URL path for the API"""
+    # Extract just the filename from the full path
+    filename = os.path.basename(filepath)
+    # Return the URL path that matches our static files mount
+    return f"/images/{filename}"
+
+
 def engineer_image_prompt(slide_title: str, slide_content: str, topic: str) -> str:
     """
     Use Gemini to create a visual, realistic prompt for image generation from slide content
@@ -101,7 +109,12 @@ def generate_images_for_sections(sections: list, topic: str) -> dict:
     except ImportError as e:
         print(f"⚠ HuggingFace Hub not installed: {str(e)}")
         print("⚠ Falling back to free API alternatives...")
-        return generate_with_free_api(sections, topic, hf_token)
+        try:
+            return generate_with_free_api(sections, topic, hf_token)
+        except Exception as fallback_error:
+            print(f"⚠ Free API also failed: {str(fallback_error)}")
+            print("⚠ Creating placeholder images...")
+            return create_placeholder_images(sections, topic)
         
     except Exception as e:
         error_msg = str(e)
@@ -173,7 +186,10 @@ def create_placeholder_images(sections: list, topic: str) -> dict:
             filepath = os.path.join(settings.IMAGES_DIR, filename)
             img.save(filepath, quality=95)
             
-            image_paths[section.id] = filepath
+            image_paths[section.id] = {
+                "filepath": filepath,
+                "url": filepath_to_url(filepath)
+            }
             print(f"  ✅ Placeholder image created: {filepath}")
             
         except Exception as e:
@@ -225,7 +241,7 @@ def generate_with_free_api(sections: list, topic: str, hf_token: str) -> dict:
             for api in apis_to_try:
                 try:
                     print(f"  🚀 Calling {api['name']}...")
-                    response = requests.get(api['url'], timeout=15)  # Reduced timeout for faster fallback
+                    response = requests.get(api['url'], timeout=10)  # Faster timeout for production
                     if response.status_code == 200:
                         print(f"  ✅ Success with {api['name']}")
                         break
@@ -246,7 +262,10 @@ def generate_with_free_api(sections: list, topic: str, hf_token: str) -> dict:
                         filepath = os.path.join(settings.IMAGES_DIR, filename)
                         image.save(filepath, quality=95)
                         
-                        image_paths[section.id] = filepath
+                        image_paths[section.id] = {
+                            "filepath": filepath,
+                            "url": filepath_to_url(filepath)
+                        }
                         print(f"  ✅ AI image generated successfully: {filepath}")
                     else:
                         print(f"  ✗ Generated image too small: {image.size}")
@@ -387,7 +406,10 @@ def create_enhanced_placeholders(sections: list, topic: str) -> dict:
             filepath = os.path.join(settings.IMAGES_DIR, filename)
             img.save(filepath, quality=95)
             
-            image_paths[section.id] = filepath
+            image_paths[section.id] = {
+                "filepath": filepath,
+                "url": filepath_to_url(filepath)
+            }
             print(f"  ✅ Enhanced placeholder created: {filepath}")
             
         except Exception as e:
@@ -470,7 +492,10 @@ def generate_with_inference_client(client, sections: list, topic: str) -> dict:
                     filepath = os.path.join(settings.IMAGES_DIR, filename)
                     image.save(filepath, quality=95)
                     
-                    image_paths[section.id] = filepath
+                    image_paths[section.id] = {
+                        "filepath": filepath,
+                        "url": filepath_to_url(filepath)
+                    }
                     print(f"  ✅ Image generated: {filepath}")
                     image_success = True
                     

@@ -66,8 +66,13 @@ def generate_slide_image(
                 # Quick fallback to free API for faster response
                 result = generate_with_free_api(sections, "presentation", hf_token)
                 if result and section.id in result:
-                    image_path = result[section.id]
-                    return {"success": True, "message": "Image generated successfully", "image_path": image_path}
+                    image_data = result[section.id]
+                    # Handle both old string format and new dict format
+                    if isinstance(image_data, dict):
+                        return {"success": True, "message": "Image generated successfully", 
+                               "image_path": image_data.get("filepath"), "image_url": image_data.get("url")}
+                    else:
+                        return {"success": True, "message": "Image generated successfully", "image_path": image_data}
                 else:
                     return {"success": False, "message": "Image generation failed, but will be included during export"}
             except ImportError as ie:

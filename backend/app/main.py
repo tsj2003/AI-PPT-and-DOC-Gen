@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from .database import get_db, init_db
 from .models import User
@@ -11,6 +12,8 @@ from .project_routes import router as project_router
 from .refine_routes import router as refine_router
 from .export_routes import router as export_router
 from .ai_routes import router as ai_router
+from .config import settings
+import os
 
 app = FastAPI(title="Document Generator")
 
@@ -105,3 +108,10 @@ app.include_router(project_router)
 app.include_router(refine_router)
 app.include_router(export_router)
 app.include_router(ai_router)
+
+# Mount static files for generated images
+if os.path.exists(settings.IMAGES_DIR):
+    app.mount("/images", StaticFiles(directory=settings.IMAGES_DIR), name="images")
+else:
+    os.makedirs(settings.IMAGES_DIR, exist_ok=True)
+    app.mount("/images", StaticFiles(directory=settings.IMAGES_DIR), name="images")

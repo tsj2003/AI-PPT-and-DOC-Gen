@@ -71,7 +71,8 @@ def generate_pptx(project: Project, sections: List[Section], image_paths: Option
         title_frame.paragraphs[0].font.color.rgb = RGBColor(25, 118, 210)
         
         # Determine if image will be added
-        has_image = section.id in image_paths and os.path.exists(image_paths[section.id])
+        image_data = image_paths.get(section.id)
+        has_image = image_data and os.path.exists(image_data.get("filepath", "") if isinstance(image_data, dict) else image_data)
         
         # Add content with proper spacing and alignment
         if section.content:
@@ -104,8 +105,9 @@ def generate_pptx(project: Project, sections: List[Section], image_paths: Option
         if has_image:
             try:
                 # Place image on right side with proper spacing
+                image_filepath = image_data.get("filepath", image_data) if isinstance(image_data, dict) else image_data
                 pic = slide.shapes.add_picture(
-                    image_paths[section.id],
+                    image_filepath,
                     Inches(5.5),      # X position (right side, slightly more space)
                     Inches(1.4),      # Y position (below title with margin)
                     width=Inches(3.8)  # Slightly smaller width for better balance
