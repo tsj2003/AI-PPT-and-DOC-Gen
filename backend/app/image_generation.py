@@ -206,11 +206,19 @@ def generate_with_free_api(sections: list, topic: str, hf_token: str) -> dict:
     import requests
     from PIL import Image
     from io import BytesIO
+    import time
     
+    start_time = time.time()
+    max_total_time = 30  # Maximum 30 seconds for all image generation
     image_paths = {}
     
     # Try Pollinations.ai (free alternative)
     for section in sections:
+        # Check if we've exceeded our time limit
+        if time.time() - start_time > max_total_time:
+            print(f"⏰ Time limit reached ({max_total_time}s), switching to placeholders for remaining sections...")
+            break
+            
         try:
             print(f"\n🎨 Processing with free API: {section.title}")
             
@@ -241,7 +249,7 @@ def generate_with_free_api(sections: list, topic: str, hf_token: str) -> dict:
             for api in apis_to_try:
                 try:
                     print(f"  🚀 Calling {api['name']}...")
-                    response = requests.get(api['url'], timeout=10)  # Faster timeout for production
+                    response = requests.get(api['url'], timeout=8)  # Very fast timeout for production
                     if response.status_code == 200:
                         print(f"  ✅ Success with {api['name']}")
                         break
@@ -282,6 +290,13 @@ def generate_with_free_api(sections: list, topic: str, hf_token: str) -> dict:
     if not image_paths:
         print("🎨 All APIs failed, creating enhanced placeholder images...")
         return create_enhanced_placeholders(sections, topic)
+    
+    # If only partial images generated, fill in the rest with placeholders
+    missing_sections = [s for s in sections if s.id not in image_paths]
+    if missing_sections:
+        print(f"🎨 Creating placeholders for {len(missing_sections)} missing sections...")
+        placeholder_images = create_enhanced_placeholders(missing_sections, topic)
+        image_paths.update(placeholder_images)
     
     return image_paths
 
