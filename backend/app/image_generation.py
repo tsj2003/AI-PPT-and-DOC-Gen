@@ -200,25 +200,55 @@ def generate_with_free_api(sections: list, topic: str, hf_token: str) -> dict:
                 topic
             )
             
-            # Use Pollinations.ai free API
-            encoded_prompt = requests.utils.quote(engineered_prompt)
-            api_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=768&model=flux&enhance=true"
+            # Try multiple free APIs in sequence
+            apis_to_try = [
+                {
+                    "name": "Pollinations.ai FLUX",
+                    "url": f"https://image.pollinations.ai/prompt/{requests.utils.quote(engineered_prompt)}?width=1024&height=768&model=flux&enhance=true"
+                },
+                {
+                    "name": "Pollinations.ai Turbo",
+                    "url": f"https://image.pollinations.ai/prompt/{requests.utils.quote(engineered_prompt)}?width=1024&height=768&model=turbo&enhance=true"
+                },
+                {
+                    "name": "Basic Pollinations",
+                    "url": f"https://image.pollinations.ai/prompt/{requests.utils.quote(engineered_prompt)}?width=1024&height=768"
+                }
+            ]
             
-            print(f"  🚀 Calling Pollinations API...")
-            response = requests.get(api_url, timeout=30)
+            response = None
+            for api in apis_to_try:
+                try:
+                    print(f"  🚀 Calling {api['name']}...")
+                    response = requests.get(api['url'], timeout=45)
+                    if response.status_code == 200:
+                        print(f"  ✅ Success with {api['name']}")
+                        break
+                    else:
+                        print(f"  ✗ {api['name']} failed with status {response.status_code}")
+                except Exception as api_error:
+                    print(f"  ✗ {api['name']} failed: {str(api_error)}")
+                    continue
             
-            if response.status_code == 200:
-                # Save image
-                image = Image.open(BytesIO(response.content))
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:20]
-                filename = f"slide_{section.id}_{timestamp}.png"
-                filepath = os.path.join(settings.IMAGES_DIR, filename)
-                image.save(filepath, quality=95)
-                
-                image_paths[section.id] = filepath
-                print(f"  ✅ Image generated via Pollinations: {filepath}")
+            if response and response.status_code == 200:
+                # Validate image content
+                try:
+                    image = Image.open(BytesIO(response.content))
+                    # Ensure minimum image size (avoid tiny error images)
+                    if image.size[0] >= 100 and image.size[1] >= 100:
+                        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:20]
+                        filename = f"slide_{section.id}_{timestamp}.png"
+                        filepath = os.path.join(settings.IMAGES_DIR, filename)
+                        image.save(filepath, quality=95)
+                        
+                        image_paths[section.id] = filepath
+                        print(f"  ✅ AI image generated successfully: {filepath}")
+                    else:
+                        print(f"  ✗ Generated image too small: {image.size}")
+                except Exception as img_error:
+                    print(f"  ✗ Invalid image data: {str(img_error)}")
             else:
-                print(f"  ✗ Pollinations API failed with status {response.status_code}")
+                print(f"  ✗ All free APIs failed")
                 
         except Exception as e:
             print(f"  ✗ Free API failed for section {section.id}: {str(e)}")
@@ -239,37 +269,60 @@ def create_enhanced_placeholders(sections: list, topic: str) -> dict:
     
     image_paths = {}
     
-    # Topic-specific color schemes
+    # Topic-specific color schemes and icons
     color_schemes = {
-        "sikh": {"bg": "#FF6B35", "accent": "#004E89", "text": "#FFFFFF"},
-        "history": {"bg": "#8B4513", "accent": "#DAA520", "text": "#FFFFFF"}, 
-        "religion": {"bg": "#4682B4", "accent": "#FFD700", "text": "#FFFFFF"},
-        "default": {"bg": "#2C3E50", "accent": "#3498DB", "text": "#FFFFFF"}
+        "sikh": {"bg": "#FF6B35", "accent": "#004E89", "text": "#FFFFFF", "gradient": "#FF8C42"},
+        "history": {"bg": "#8B4513", "accent": "#DAA520", "text": "#FFFFFF", "gradient": "#A0522D"}, 
+        "religion": {"bg": "#4682B4", "accent": "#FFD700", "text": "#FFFFFF", "gradient": "#5F9EA0"},
+        "ecommerce": {"bg": "#E74C3C", "accent": "#3498DB", "text": "#FFFFFF", "gradient": "#EC7063"},
+        "business": {"bg": "#2C3E50", "accent": "#F39C12", "text": "#FFFFFF", "gradient": "#34495E"},
+        "technology": {"bg": "#9B59B6", "accent": "#1ABC9C", "text": "#FFFFFF", "gradient": "#AF7AC5"},
+        "default": {"bg": "#2C3E50", "accent": "#3498DB", "text": "#FFFFFF", "gradient": "#34495E"}
     }
     
-    # Detect topic theme
+    # Detect topic theme with more categories
     topic_lower = topic.lower()
-    if "sikh" in topic_lower:
+    section_lower = section.title.lower() if hasattr(section, 'title') else ""
+    combined_text = f"{topic_lower} {section_lower}"
+    
+    if "sikh" in combined_text:
         colors = color_schemes["sikh"]
-    elif "history" in topic_lower or "guru" in topic_lower:
+    elif "history" in combined_text or "guru" in combined_text:
         colors = color_schemes["history"]
-    elif "religion" in topic_lower or "spiritual" in topic_lower:
+    elif "religion" in combined_text or "spiritual" in combined_text:
         colors = color_schemes["religion"]
+    elif "ecommerce" in combined_text or "commerce" in combined_text or "shopping" in combined_text or "retail" in combined_text:
+        colors = color_schemes["ecommerce"]
+    elif "business" in combined_text or "market" in combined_text or "strategy" in combined_text:
+        colors = color_schemes["business"]
+    elif "technology" in combined_text or "digital" in combined_text or "tech" in combined_text or "ai" in combined_text:
+        colors = color_schemes["technology"]
     else:
         colors = color_schemes["default"]
     
     for section in sections:
         try:
-            # Create enhanced professional image
+            # Create enhanced professional image with gradient
             width, height = 1024, 768
             img = Image.new('RGB', (width, height), color=colors["bg"])
             draw = ImageDraw.Draw(img)
             
-            # Add gradient overlay
-            for i in range(height):
-                alpha = i / height
-                overlay_alpha = int(50 * (1 - alpha))  # Fade from top
-                overlay_color = (*[int(c) for c in bytes.fromhex(colors["accent"][1:])], overlay_alpha)
+            # Create diagonal gradient
+            bg_color = [int(colors["bg"][i:i+2], 16) for i in (1, 3, 5)]
+            gradient_color = [int(colors["gradient"][i:i+2], 16) for i in (1, 3, 5)]
+            
+            for y in range(height):
+                for x in range(width):
+                    # Calculate gradient based on distance from top-left
+                    distance = ((x/width)**2 + (y/height)**2)**0.5
+                    alpha = min(distance, 1.0)
+                    
+                    r = int(bg_color[0] * (1-alpha) + gradient_color[0] * alpha)
+                    g = int(bg_color[1] * (1-alpha) + gradient_color[1] * alpha)
+                    b = int(bg_color[2] * (1-alpha) + gradient_color[2] * alpha)
+                    
+                    if x % 4 == 0 and y % 4 == 0:  # Sample every 4th pixel for performance
+                        draw.point((x, y), fill=(r, g, b))
             
             # Add topic and section info with better typography
             try:
@@ -279,10 +332,28 @@ def create_enhanced_placeholders(sections: list, topic: str) -> dict:
                 font_title = ImageFont.load_default()
                 font_topic = ImageFont.load_default()
             
-            # Add decorative border
-            border_width = 8
+            # Add decorative elements
+            accent_color = colors["accent"]
+            
+            # Modern geometric shapes
+            # Top-right triangle
+            triangle_points = [(width-200, 0), (width, 0), (width, 200)]
+            draw.polygon(triangle_points, fill=accent_color)
+            
+            # Bottom-left circle
+            circle_radius = 150
+            draw.ellipse([50, height-circle_radius-50, 50+circle_radius, height-50], 
+                        fill=accent_color, width=3)
+            
+            # Decorative lines
+            for i in range(3):
+                y_pos = height - 150 + (i * 20)
+                draw.rectangle([width-250, y_pos, width-100, y_pos+4], fill=colors["text"])
+            
+            # Border frame
+            border_width = 6
             draw.rectangle([border_width, border_width, width-border_width, height-border_width], 
-                         outline=colors["accent"], width=border_width)
+                         outline=colors["text"], width=border_width)
             
             # Add topic title
             topic_text = topic.upper()
