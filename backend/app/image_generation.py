@@ -1,6 +1,7 @@
 """
-Image generation module using HuggingFace Inference API
-Uses: InferenceClient + stabilityai/stable-diffusion-xl-base-1.0 model
+Image generation module using HuggingFace Inference API and Free APIs
+Uses: Multiple models with fallbacks for better image quality
+Updated: Enhanced AI image generation with multiple providers
 """
 
 import os
