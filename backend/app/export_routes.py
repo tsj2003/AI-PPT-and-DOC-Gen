@@ -53,5 +53,10 @@ def export_project(
     return FileResponse(
         path=filepath,
         media_type=media_type,
-        filename=filename
+        filename=filename,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+        }
     )
