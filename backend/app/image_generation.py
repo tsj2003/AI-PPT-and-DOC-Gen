@@ -28,19 +28,23 @@ def engineer_image_prompt(slide_title: str, slide_content: str, topic: str) -> s
     
     model = genai.GenerativeModel('gemini-2.5-flash')
     
-    prompt = f"""Create a SHORT, VISUAL image prompt (1-2 sentences) for Stable Diffusion XL.
-The prompt should be realistic, vivid, and suitable for professional presentations.
+    prompt = f"""Create a detailed, visual image prompt for AI image generation.
+Make it specific, realistic, and professional for a presentation slide.
 
 Slide Title: {slide_title}
-Slide Content: {slide_content[:200]}
-Topic: {topic}
+Slide Content: {slide_content[:300]}
+Overall Topic: {topic}
 
-Requirements:
-- Make it VISUAL and DESCRIPTIVE (not abstract)
-- Use realistic adjectives: realistic, professional, detailed, high-quality
-- Include style suggestions: painting, illustration, photography, 3D render
-- Keep it under 80 words
-- NO generic descriptions, make it SPECIFIC to the content
+Create a prompt that includes:
+1. Main subject/scene (be specific - people, places, objects)
+2. Visual style (realistic photograph, historical painting, detailed illustration)
+3. Setting/background (time period, location, environment)
+4. Quality descriptors (high quality, detailed, professional, 8k)
+5. Avoid text, logos, or abstract concepts
+
+Examples:
+- For Guru Nanak: "A realistic historical painting of Guru Nanak Dev Ji sitting under a tree, wearing white robes and turban, teaching disciples in 15th century Punjab countryside, detailed oil painting style, warm golden lighting, high quality, professional artwork"
+- For Sikh Empire: "A detailed historical illustration of the Sikh Empire golden period, showing Lahore Fort with Sikh soldiers in blue uniforms, realistic 19th century setting, detailed architecture, high quality historical artwork"
 
 Return ONLY the image prompt, nothing else."""
     
@@ -98,11 +102,11 @@ def generate_images_for_sections(sections: list, topic: str) -> dict:
         print(f"⚠ HuggingFace Inference API failed: {error_msg}")
         
         if "403" in error_msg or "permissions" in error_msg.lower():
-            print("⚠ Token doesn't have Inference API permissions. Using fallback method.")
-            return create_placeholder_images(sections, topic)
+            print("⚠ Token doesn't have Inference API permissions. Trying free alternative...")
+            return generate_with_free_api(sections, topic, hf_token)
         else:
-            print("⚠ Other error with Inference API. Creating placeholder images.")
-            return create_placeholder_images(sections, topic)
+            print("⚠ Other error with Inference API. Trying free alternative...")
+            return generate_with_free_api(sections, topic, hf_token)
 
 
 def create_placeholder_images(sections: list, topic: str) -> dict:
@@ -174,12 +178,146 @@ def create_placeholder_images(sections: list, topic: str) -> dict:
 
 
 def generate_with_free_api(sections: list, topic: str, hf_token: str) -> dict:
-    """Try to use free HuggingFace spaces for image generation"""
-    print("🎨 Using free HuggingFace Spaces API as fallback...")
+    """Try to use alternative free APIs for image generation"""
+    print("🎨 Trying alternative free image generation API...")
     
-    # For now, fall back to placeholder images
-    # You could implement calls to free HF spaces here
-    return create_placeholder_images(sections, topic)
+    import requests
+    from PIL import Image
+    from io import BytesIO
+    
+    image_paths = {}
+    
+    # Try Pollinations.ai (free alternative)
+    for section in sections:
+        try:
+            print(f"\n🎨 Processing with free API: {section.title}")
+            
+            # Create engineered prompt
+            engineered_prompt = engineer_image_prompt(
+                section.title,
+                section.content or "",
+                topic
+            )
+            
+            # Use Pollinations.ai free API
+            encoded_prompt = requests.utils.quote(engineered_prompt)
+            api_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=768&model=flux&enhance=true"
+            
+            print(f"  🚀 Calling Pollinations API...")
+            response = requests.get(api_url, timeout=30)
+            
+            if response.status_code == 200:
+                # Save image
+                image = Image.open(BytesIO(response.content))
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:20]
+                filename = f"slide_{section.id}_{timestamp}.png"
+                filepath = os.path.join(settings.IMAGES_DIR, filename)
+                image.save(filepath, quality=95)
+                
+                image_paths[section.id] = filepath
+                print(f"  ✅ Image generated via Pollinations: {filepath}")
+            else:
+                print(f"  ✗ Pollinations API failed with status {response.status_code}")
+                
+        except Exception as e:
+            print(f"  ✗ Free API failed for section {section.id}: {str(e)}")
+            continue
+    
+    # If no images generated, create enhanced placeholders
+    if not image_paths:
+        print("🎨 All APIs failed, creating enhanced placeholder images...")
+        return create_enhanced_placeholders(sections, topic)
+    
+    return image_paths
+
+
+def create_enhanced_placeholders(sections: list, topic: str) -> dict:
+    """Create enhanced, topic-specific placeholder images"""
+    from PIL import Image, ImageDraw, ImageFont
+    import textwrap
+    
+    image_paths = {}
+    
+    # Topic-specific color schemes
+    color_schemes = {
+        "sikh": {"bg": "#FF6B35", "accent": "#004E89", "text": "#FFFFFF"},
+        "history": {"bg": "#8B4513", "accent": "#DAA520", "text": "#FFFFFF"}, 
+        "religion": {"bg": "#4682B4", "accent": "#FFD700", "text": "#FFFFFF"},
+        "default": {"bg": "#2C3E50", "accent": "#3498DB", "text": "#FFFFFF"}
+    }
+    
+    # Detect topic theme
+    topic_lower = topic.lower()
+    if "sikh" in topic_lower:
+        colors = color_schemes["sikh"]
+    elif "history" in topic_lower or "guru" in topic_lower:
+        colors = color_schemes["history"]
+    elif "religion" in topic_lower or "spiritual" in topic_lower:
+        colors = color_schemes["religion"]
+    else:
+        colors = color_schemes["default"]
+    
+    for section in sections:
+        try:
+            # Create enhanced professional image
+            width, height = 1024, 768
+            img = Image.new('RGB', (width, height), color=colors["bg"])
+            draw = ImageDraw.Draw(img)
+            
+            # Add gradient overlay
+            for i in range(height):
+                alpha = i / height
+                overlay_alpha = int(50 * (1 - alpha))  # Fade from top
+                overlay_color = (*[int(c) for c in bytes.fromhex(colors["accent"][1:])], overlay_alpha)
+            
+            # Add topic and section info with better typography
+            try:
+                font_title = ImageFont.truetype("Arial.ttf", 40)
+                font_topic = ImageFont.truetype("Arial.ttf", 28)
+            except:
+                font_title = ImageFont.load_default()
+                font_topic = ImageFont.load_default()
+            
+            # Add decorative border
+            border_width = 8
+            draw.rectangle([border_width, border_width, width-border_width, height-border_width], 
+                         outline=colors["accent"], width=border_width)
+            
+            # Add topic title
+            topic_text = topic.upper()
+            topic_bbox = draw.textbbox((0, 0), topic_text, font=font_topic)
+            topic_width = topic_bbox[2] - topic_bbox[0]
+            draw.text(((width - topic_width) // 2, 80), topic_text, 
+                     fill=colors["text"], font=font_topic)
+            
+            # Add section title with better wrapping
+            title = section.title
+            wrapped_title = textwrap.fill(title, width=25)
+            title_lines = wrapped_title.split('\n')
+            
+            total_height = len(title_lines) * 50
+            start_y = (height - total_height) // 2
+            
+            for i, line in enumerate(title_lines):
+                line_bbox = draw.textbbox((0, 0), line, font=font_title)
+                line_width = line_bbox[2] - line_bbox[0]
+                draw.text(((width - line_width) // 2, start_y + i * 50), 
+                         line, fill=colors["text"], font=font_title)
+            
+            # Save the enhanced image
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:20]
+            filename = f"slide_{section.id}_{timestamp}.png"
+            filepath = os.path.join(settings.IMAGES_DIR, filename)
+            img.save(filepath, quality=95)
+            
+            image_paths[section.id] = filepath
+            print(f"  ✅ Enhanced placeholder created: {filepath}")
+            
+        except Exception as e:
+            print(f"  ✗ Failed to create enhanced placeholder for section {section.id}: {str(e)}")
+            continue
+    
+    return image_paths
 
 
 def generate_with_inference_client(client, sections: list, topic: str) -> dict:
@@ -213,14 +351,33 @@ def generate_with_inference_client(client, sections: list, topic: str) -> dict:
             
             while retry_count < max_retries and not image_success:
                 try:
-                    # Call the model with engineered prompt
-                    image_result = client.text_to_image(
-                        prompt=engineered_prompt,
-                        model="stabilityai/stable-diffusion-xl-base-1.0",
-                        negative_prompt=negative_prompt,
-                        height=768,
-                        width=1024,
-                    )
+                    # Try multiple models in order of preference
+                    models_to_try = [
+                        "black-forest-labs/FLUX.1-dev",  # Better quality, newer model
+                        "stabilityai/stable-diffusion-xl-base-1.0",  # Fallback
+                        "runwayml/stable-diffusion-v1-5"  # Final fallback
+                    ]
+                    
+                    model_used = None
+                    for model in models_to_try:
+                        try:
+                            print(f"    Trying model: {model}")
+                            image_result = client.text_to_image(
+                                prompt=engineered_prompt,
+                                model=model,
+                                negative_prompt=negative_prompt,
+                                height=768,
+                                width=1024,
+                            )
+                            model_used = model
+                            print(f"    ✓ Success with: {model}")
+                            break
+                        except Exception as model_error:
+                            print(f"    ✗ {model} failed: {str(model_error)}")
+                            continue
+                    
+                    if not model_used:
+                        raise Exception("All models failed to generate image")
                     
                     # Handle different return types from HuggingFace API
                     if hasattr(image_result, 'save'):
