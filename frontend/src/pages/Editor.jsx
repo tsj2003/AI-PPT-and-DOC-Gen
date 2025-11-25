@@ -125,7 +125,13 @@ export default function Editor() {
             project.sections
               .sort((a, b) => a.order - b.order)
               .map((section) => (
-                <SectionCard key={section.id} section={section} onUpdate={loadProject} />
+                <SectionCard 
+                  key={section.id} 
+                  section={section} 
+                  onUpdate={loadProject}
+                  projectType={project.document_type}
+                  projectTopic={project.topic}
+                />
               ))
           ) : (
             <div className="bg-white rounded-lg shadow-md p-8 text-center">

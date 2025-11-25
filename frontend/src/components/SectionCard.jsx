@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { ThumbsUp, ThumbsDown, MessageSquare, Sparkles, RefreshCw } from 'lucide-react';
+import { ThumbsUp, ThumbsDown, MessageSquare, Sparkles, RefreshCw, Image } from 'lucide-react';
 import { generateContent, refineContent, addFeedback, addComment } from '../api/llm';
+import { generateSlideImage } from '../api/ai';
 
-export default function SectionCard({ section, onUpdate }) {
+export default function SectionCard({ section, onUpdate, projectType, projectTopic }) {
   const [loading, setLoading] = useState(false);
+  const [imageLoading, setImageLoading] = useState(false);
   const [refinePrompt, setRefinePrompt] = useState('');
   const [showRefine, setShowRefine] = useState(false);
   const [comment, setComment] = useState('');
@@ -56,6 +58,19 @@ export default function SectionCard({ section, onUpdate }) {
     }
   };
 
+  const handleGenerateImage = async () => {
+    setImageLoading(true);
+    try {
+      const prompt = `${section.title} for ${projectTopic}`;
+      const result = await generateSlideImage(prompt, true);
+      alert('Image generated successfully! It will be included in your export.');
+      onUpdate();
+    } catch (error) {
+      alert('Failed to generate image: ' + error.message);
+    }
+    setImageLoading(false);
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-md p-6 mb-4">
       <div className="flex justify-between items-start mb-4">
@@ -72,13 +87,25 @@ export default function SectionCard({ section, onUpdate }) {
             </button>
           )}
           {section.content && (
-            <button
-              onClick={() => setShowRefine(!showRefine)}
-              className="flex items-center space-x-1 bg-purple-600 text-white px-3 py-1 rounded hover:bg-purple-700"
-            >
-              <RefreshCw className="h-4 w-4" />
-              <span>Refine</span>
-            </button>
+            <>
+              <button
+                onClick={() => setShowRefine(!showRefine)}
+                className="flex items-center space-x-1 bg-purple-600 text-white px-3 py-1 rounded hover:bg-purple-700"
+              >
+                <RefreshCw className="h-4 w-4" />
+                <span>Refine</span>
+              </button>
+              {projectType === 'pptx' && (
+                <button
+                  onClick={handleGenerateImage}
+                  disabled={imageLoading}
+                  className="flex items-center space-x-1 bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 disabled:opacity-50"
+                >
+                  <Image className="h-4 w-4" />
+                  <span>{imageLoading ? 'Generating...' : 'Generate Image'}</span>
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>

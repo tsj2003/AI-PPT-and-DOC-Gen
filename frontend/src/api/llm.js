@@ -86,7 +86,7 @@ export const exportProject = async (projectId, includeImages = false) => {
       ...getAuthHeader(),
       responseType: 'blob'
     };
-    let url = `/export/${projectId}/`;
+    let url = getApiUrl(`/export/${projectId}/`);
     if (includeImages) {
       url += `?include_images=true`;
     }
