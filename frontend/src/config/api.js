@@ -2,7 +2,7 @@
 
 const API_CONFIG = {
   development: {
-    baseURL: 'http://localhost:8000'
+    baseURL: 'http://localhost:9000'
   },
   production: {
     // Update this when you deploy your backend

@@ -199,7 +199,7 @@ def create_placeholder_images(sections: list, topic: str) -> dict:
     return image_paths
 
 
-def generate_with_free_api(sections: list, topic: str, hf_token: str) -> dict:
+def generate_with_free_api(sections: list, topic: str, hf_token: str = None) -> dict:
     """Try to use alternative free APIs for image generation"""
     print("🎨 Trying alternative free image generation API...")
     
@@ -209,10 +209,10 @@ def generate_with_free_api(sections: list, topic: str, hf_token: str) -> dict:
     import time
     
     start_time = time.time()
-    max_total_time = 30  # Maximum 30 seconds for all image generation
+    max_total_time = 15  # Reduced to 15 seconds for faster fallback to placeholders
     image_paths = {}
     
-    # Try Pollinations.ai (free alternative)
+    # Try Pollinations.ai (free alternative) - but fallback quickly if it fails
     for section in sections:
         # Check if we've exceeded our time limit
         if time.time() - start_time > max_total_time:
@@ -249,7 +249,7 @@ def generate_with_free_api(sections: list, topic: str, hf_token: str) -> dict:
             for api in apis_to_try:
                 try:
                     print(f"  🚀 Calling {api['name']}...")
-                    response = requests.get(api['url'], timeout=8)  # Very fast timeout for production
+                    response = requests.get(api['url'], timeout=5)  # Even faster timeout to prevent hanging
                     if response.status_code == 200:
                         print(f"  ✅ Success with {api['name']}")
                         break
@@ -319,27 +319,26 @@ def create_enhanced_placeholders(sections: list, topic: str) -> dict:
         "default": {"bg": "#2C3E50", "accent": "#3498DB", "text": "#FFFFFF", "gradient": "#34495E"}
     }
     
-    # Detect topic theme with more categories
-    topic_lower = topic.lower()
-    section_lower = section.title.lower() if hasattr(section, 'title') else ""
-    combined_text = f"{topic_lower} {section_lower}"
-    
-    if "sikh" in combined_text:
-        colors = color_schemes["sikh"]
-    elif "history" in combined_text or "guru" in combined_text:
-        colors = color_schemes["history"]
-    elif "religion" in combined_text or "spiritual" in combined_text:
-        colors = color_schemes["religion"]
-    elif "ecommerce" in combined_text or "commerce" in combined_text or "shopping" in combined_text or "retail" in combined_text:
-        colors = color_schemes["ecommerce"]
-    elif "business" in combined_text or "market" in combined_text or "strategy" in combined_text:
-        colors = color_schemes["business"]
-    elif "technology" in combined_text or "digital" in combined_text or "tech" in combined_text or "ai" in combined_text:
-        colors = color_schemes["technology"]
-    else:
-        colors = color_schemes["default"]
-    
     for section in sections:
+        # Detect topic theme with more categories for each section
+        topic_lower = topic.lower()
+        section_lower = section.title.lower() if hasattr(section, 'title') else ""
+        combined_text = f"{topic_lower} {section_lower}"
+        
+        if "sikh" in combined_text:
+            colors = color_schemes["sikh"]
+        elif "history" in combined_text or "guru" in combined_text:
+            colors = color_schemes["history"]
+        elif "religion" in combined_text or "spiritual" in combined_text:
+            colors = color_schemes["religion"]
+        elif "ecommerce" in combined_text or "commerce" in combined_text or "shopping" in combined_text or "retail" in combined_text:
+            colors = color_schemes["ecommerce"]
+        elif "business" in combined_text or "market" in combined_text or "strategy" in combined_text:
+            colors = color_schemes["business"]
+        elif "technology" in combined_text or "digital" in combined_text or "tech" in combined_text or "ai" in combined_text:
+            colors = color_schemes["technology"]
+        else:
+            colors = color_schemes["default"]
         try:
             # Create enhanced professional image with gradient
             width, height = 1024, 768
